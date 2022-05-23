@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from 'react';
 
+// custom hook to synchronize state with local storage
+const useSemiPersistentState = (key, initialState) => {
+  const [value, setValue] = useState(
+    localStorage.getItem(key) || initialState
+  );
+
+  // side effect runs each time the value changes as well as when the 
+  // component is initialized
+  useEffect(() => {
+    // update the value in local storage whenever it changes
+    localStorage.setItem(key, value);
+  }, [value, key]);
+
+  // return the current value as well as the updater function
+  return [value, setValue];
+};
+
 const App = () => {
   const stories = [
     {
@@ -20,18 +37,7 @@ const App = () => {
     },
   ];
 
-  const [searchTerm, setSearchTerm] = useState(
-    /* set the initial search value as the most recent search term stored in
-     * session storage or the default empty string
-     */
-    localStorage.getItem('search') || ''
-  );
-
-  // update the search term in local storage each time the search term changes;
-  // also called when the component renders for the first time
-  useEffect(() => {
-    localStorage.setItem('search', searchTerm);
-  }, [searchTerm]);
+  const [searchTerm, setSearchTerm] = useSemiPersistentState('search','');
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
