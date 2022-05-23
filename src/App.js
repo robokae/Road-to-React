@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const App = () => {
   const stories = [
@@ -20,7 +20,18 @@ const App = () => {
     },
   ];
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(
+    /* set the initial search value as the most recent search term stored in
+     * session storage or the default empty string
+     */
+    localStorage.getItem('search') || ''
+  );
+
+  // update the search term in local storage each time the search term changes;
+  // also called when the component renders for the first time
+  useEffect(() => {
+    localStorage.setItem('search', searchTerm);
+  }, [searchTerm]);
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
