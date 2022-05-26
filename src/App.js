@@ -36,10 +36,29 @@ const initialStories = [
   },
 ];
 
+const getAsyncStories = () => (
+  new Promise((resolve) => (
+    // simulate real-world asynchrounous data fetching by setting a delay
+    // prior to returning the data
+    setTimeout(
+      () => resolve({ data: { stories: initialStories } }),
+      2000
+    )
+  ))
+);
+
 const App = () => {
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search','');
 
-  const [stories, setStories] = useState(initialStories);
+  const [stories, setStories] = useState([]);
+
+  useEffect(() => {
+    // fetch the asynchronous data
+    getAsyncStories().then(result => {
+      // set the state to the fetched data
+      setStories(result.data.stories);
+    });
+  }, []);
 
   const handleRemoveStory = (item) => {
     const newStories = stories.filter(
