@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useReducer } from 'react';
 
 // custom hook to synchronize state with local storage
 const useSemiPersistentState = (key, initialState) => {
@@ -47,10 +47,27 @@ const getAsyncStories = () => (
   ))
 );
 
-const App = () => {
-  const [searchTerm, setSearchTerm] = useSemiPersistentState('search','');
+const storiesReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_STORIES':
+      return action.payload;
+    case 'REMOVE_STORY':
+      return state.filter(
+        (story) => action.payload.objectID !== story.objectID
+      );
+    default:
+      throw new Error();
+  }
+};
 
-  const [stories, setStories] = useState([]);
+const App = () => {
+  const [searchTerm, setSearchTerm] = useSemiPersistentState('search', '');
+
+  const [stories, dispatchStories] = useReducer(
+    storiesReducer,
+    []
+  );
+
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
 
@@ -60,30 +77,31 @@ const App = () => {
     // fetch the asynchronous data
     getAsyncStories()
       .then(result => {
-        // set the state to the fetched data
-        setStories(result.data.stories);
+        // set the stories using the reducer
+        dispatchStories({
+          type: 'SET_STORIES',
+          payload: result.data.stories,
+        });
+
         setIsLoading(false);
       })
       .catch(() => setIsError(true));
   }, []);
 
   const handleRemoveStory = (item) => {
-    const newStories = stories.filter(
-      // get all stories whose ID are not equal to that of the story to remove
-      // and store in a new array
-      (story) => item.objectID !== story.objectID
-    );
-
-    // set the state to the new array
-    setStories(newStories);
+    // remove the story with the reducer
+    dispatchStories({
+      type: 'REMOVE_STORY',
+      payload: item,
+    });
   };
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
   };
 
-  const searchedStories = stories.filter((story) => 
-    story.title.toLowerCase().includes(searchTerm.toLowerCase()) 
+  const searchedStories = stories.filter((story) =>
+    story.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -119,9 +137,9 @@ const App = () => {
   )
 };
 
-const InputWithLabel = ({ 
-  id, 
-  value, 
+const InputWithLabel = ({
+  id,
+  value,
   type = 'text',
   onInputChange,
   isFocused,
@@ -153,9 +171,9 @@ const InputWithLabel = ({
 const List = ({ list, onRemoveItem }) => (
   <ul>
     {list.map((item) => (
-      <Item 
-        key={item.objectID} 
-        item={item} 
+      <Item
+        key={item.objectID}
+        item={item}
         onRemoveItem={onRemoveItem}
       />
     ))}
