@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // custom hook to synchronize state with local storage
 const useSemiPersistentState = (key, initialState) => {
@@ -17,27 +17,40 @@ const useSemiPersistentState = (key, initialState) => {
   return [value, setValue];
 };
 
-const App = () => {
-  const stories = [
-    {
-      title: 'React',
-      url: 'https://reactjs.org/',
-      author: 'Jordan Walke',
-      num_comments: 3,
-      points: 4,
-      objectID: 0,
-    },
-    {
-      title: 'Redux',
-      url: 'https://redux.js.org/',
-      author: 'Dan Abramov, Andrew Clark',
-      num_comments: 2,
-      points: 5,
-      objectID: 1,
-    },
-  ];
+const initialStories = [
+  {
+    title: 'React',
+    url: 'https://reactjs.org/',
+    author: 'Jordan Walke',
+    num_comments: 3,
+    points: 4,
+    objectID: 0,
+  },
+  {
+    title: 'Redux',
+    url: 'https://redux.js.org/',
+    author: 'Dan Abramov, Andrew Clark',
+    num_comments: 2,
+    points: 5,
+    objectID: 1,
+  },
+];
 
+const App = () => {
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search','');
+
+  const [stories, setStories] = useState(initialStories);
+
+  const handleRemoveStory = (item) => {
+    const newStories = stories.filter(
+      // get all stories whose ID are not equal to that of the story to remove
+      // and store in a new array
+      (story) => item.objectID !== story.objectID
+    );
+
+    // set the state to the new array
+    setStories(newStories);
+  };
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
@@ -53,41 +66,59 @@ const App = () => {
 
       <InputWithLabel
         id="search"
-        label="Search"
         value={searchTerm}
+        isFocused
         onInputChange={handleSearch}
-      />
+      >
+        <strong>Search:</strong>
+      </InputWithLabel>
 
       <hr />
 
-      <List list={searchedStories} />
+      <List list={searchedStories} onRemoveItem={handleRemoveStory} />
     </div>
   )
 };
 
 const InputWithLabel = ({ 
   id, 
-  label, 
   value, 
   type = 'text',
   onInputChange,
-}) => (
-  <>
-    <label htmlFor={id}>{label}</label>
-    &nbsp;
-    <input
-      id={id}
-      type={type}
-      value={value}
-      onChange={onInputChange}
-    />
-  </>
-);
+  isFocused,
+  children,
+}) => {
+  const inputRef = useRef();
 
-const List = ({ list }) => (
+  useEffect(() => {
+    if (isFocused && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isFocused]);
+
+  return (
+    <>
+      <label htmlFor={id}>{children}</label>
+      &nbsp;
+      <input
+        ref={inputRef}
+        id={id}
+        type={type}
+        value={value}
+        onChange={onInputChange}
+      />
+    </>
+  );
+};
+
+const List = ({ list, onRemoveItem }) => (
   <ul>
     {list.map((item) => (
-      <Item key={item.objectID} item={item} />
+      <Item 
+        key={item.objectID} 
+        item={item} 
+        onRemoveItem={onRemoveItem}
+      />
     ))}
   </ul>
 );
@@ -101,16 +132,23 @@ const List = ({ list }) => (
 //   </ul>  
 // );
 
-const Item = ({ item }) => (
-  <li>
-    <span>
-      <a href={item.url}>{item.title}</a>
-    </span>
-    <span>{item.author}</span>
-    <span>{item.num_comments}</span>
-    <span>{item.points}</span>
-  </li>
-);
+const Item = ({ item, onRemoveItem }) => {
+  return (
+    <li>
+      <span>
+        <a href={item.url}>{item.title}</a>
+      </span>
+      <span>{item.author}</span>
+      <span>{item.num_comments}</span>
+      <span>{item.points}</span>
+      <span>
+        <button type="button" onClick={() => onRemoveItem(item)}>
+          Dismiss
+        </button>
+      </span>
+    </li>
+  );
+};
 
 // alternative more concise version using object destructuring
 // const Item = ({ title, url, author, num_comments, points }) => (
