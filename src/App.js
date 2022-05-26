@@ -51,13 +51,20 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search','');
 
   const [stories, setStories] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
+    setIsLoading(true);
+
     // fetch the asynchronous data
-    getAsyncStories().then(result => {
-      // set the state to the fetched data
-      setStories(result.data.stories);
-    });
+    getAsyncStories()
+      .then(result => {
+        // set the state to the fetched data
+        setStories(result.data.stories);
+        setIsLoading(false);
+      })
+      .catch(() => setIsError(true));
   }, []);
 
   const handleRemoveStory = (item) => {
@@ -94,7 +101,20 @@ const App = () => {
 
       <hr />
 
-      <List list={searchedStories} onRemoveItem={handleRemoveStory} />
+      {isError && <p>Something went wrong...</p>}
+
+      {isLoading
+        ? (
+          <p>Loading...</p>
+        )
+        : (
+          <List
+            list={searchedStories}
+            onRemoveItem={handleRemoveStory}
+          />
+        )
+      }
+
     </div>
   )
 };
