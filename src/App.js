@@ -6,6 +6,7 @@ import React,
     useReducer,
     useCallback
   } from 'react';
+import axios from 'axios';
 
 // custom hook to synchronize state with local storage
 const useSemiPersistentState = (key, initialState) => {
@@ -63,6 +64,10 @@ const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
 const App = () => {
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search', '');
 
+  const [url, setUrl] = useState(
+    `${API_ENDPOINT}${searchTerm}`
+  );
+
   const [stories, dispatchStories] = useReducer(
     storiesReducer,
     { data: [], isLoading: false, isError: false }
@@ -71,29 +76,20 @@ const App = () => {
   // useCallback hook is used to create a new function (during a re-render when 
   // the state changes) only when the values in the dependency array changes,
   // which improves efficiency
-  const handleFetchStories = useCallback(() => {
-    if (!searchTerm)
-      return;
+  const handleFetchStories = useCallback(async () => {
+    dispatchStories({ type: 'STORIES_FETCH_INIT' });
 
-    dispatchStories({
-      type: 'STORIES_FETCH_INIT',
-    });
+    try {
+      const result = await axios.get(url);
 
-    // get stories from API
-    fetch(`${API_ENDPOINT}${searchTerm}`)
-      .then((response) => response.json())
-      .then((result) => {
-        dispatchStories({
-          type: 'STORIES_FETCH_SUCCESS',
-          payload: result.hits,
-        });
+      dispatchStories({
+        type: 'STORIES_FETCH_SUCCESS',
+        payload: result.data.hits,
       })
-      .catch(() => {
-        dispatchStories({
-          type: 'STORIES_FETCH_FAILURE',
-        });
-      });
-  }, [searchTerm]);
+    } catch {
+      dispatchStories({ type: 'STORIES_FETCH_FAILURE' });
+    }
+  }, [url]);
 
   useEffect(() => {
     // business logic is extracted to a function for reusuability as well as to
@@ -109,8 +105,14 @@ const App = () => {
     });
   };
 
-  const handleSearch = (event) => {
+  const handleSearchInput = (event) => {
+    // update the search term
     setSearchTerm(event.target.value);
+  };
+
+  const handleSearchSubmit = () => {
+    // update the endpoint URL
+    setUrl(`${API_ENDPOINT}${searchTerm}`);
   };
 
   return (
@@ -121,10 +123,18 @@ const App = () => {
         id="search"
         value={searchTerm}
         isFocused
-        onInputChange={handleSearch}
+        onInputChange={handleSearchInput}
       >
         <strong>Search:</strong>
       </InputWithLabel>
+
+      <button
+        type="button"
+        disabled={!searchTerm}
+        onClick={handleSearchSubmit}
+      >
+        Submit
+      </button>
 
       <hr />
 
