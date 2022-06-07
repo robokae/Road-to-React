@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useRef, useReducer } from 'react';
+import React, 
+  { 
+    useState, 
+    useEffect, 
+    useRef, 
+    useReducer,
+    useCallback
+  } from 'react';
 
 // custom hook to synchronize state with local storage
 const useSemiPersistentState = (key, initialState) => {
@@ -61,15 +68,18 @@ const App = () => {
     { data: [], isLoading: false, isError: false }
   );
 
-  useEffect(() => {
+  // useCallback hook is used to create a new function (during a re-render when 
+  // the state changes) only when the values in the dependency array changes,
+  // which improves efficiency
+  const handleFetchStories = useCallback(() => {
     if (!searchTerm)
       return;
 
-    dispatchStories({ 
-      type: 'STORIES_FETCH_INIT'
+    dispatchStories({
+      type: 'STORIES_FETCH_INIT',
     });
 
-    // fetch stories from API
+    // get stories from API
     fetch(`${API_ENDPOINT}${searchTerm}`)
       .then((response) => response.json())
       .then((result) => {
@@ -78,12 +88,18 @@ const App = () => {
           payload: result.hits,
         });
       })
-      .catch(() =>
+      .catch(() => {
         dispatchStories({
           type: 'STORIES_FETCH_FAILURE',
-        })
-      )
+        });
+      });
   }, [searchTerm]);
+
+  useEffect(() => {
+    // business logic is extracted to a function for reusuability as well as to
+    // use in the useCallback hook
+    handleFetchStories();
+  }, [handleFetchStories]);
 
   const handleRemoveStory = (item) => {
     // remove the story with the reducer
